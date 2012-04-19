@@ -27,6 +27,7 @@ def load_current_resource
   @gemset       = select_gemset(new_resource.ruby_string)
   @ruby_string  = @gemset.nil? ? @rubie : "#{@rubie}@#{@gemset}"
   @rvm_env      = ::RVM::ChefUserEnvironment.new(new_resource.user)
+  @rvm_bin_path = ::File.join(@rvm_env.config["rvm_path"], "bin")
 
   if new_resource.binary.nil?
     @binaries = new_resource.binaries || []
@@ -47,15 +48,15 @@ action :create do
 
   @rvm_env.use @ruby_string
 
-  @binaries.each { |b| create_wrapper(b) }
+  @binaries.each { |b| create_wrapper(b, @rvm_bin_path) }
 end
 
 private
 
-def create_wrapper(bin)
+def create_wrapper(bin, rvm_bin_path)
   full_bin = "#{new_resource.prefix}_#{bin}"
   resource_name = "rvm_wrapper[#{full_bin}::#{@ruby_string}]"
-  script = ::File.join(::File.dirname(node['rvm']['root_path']), "bin", full_bin)
+  script = ::File.join(rvm_bin_path, full_bin)
 
   if ::File.exists?(script)
     Chef::Log.debug("#{resource_name} already exists, so updating")
